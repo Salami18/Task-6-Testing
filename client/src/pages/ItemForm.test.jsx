@@ -44,6 +44,35 @@ describe('ItemForm — report mode (/items/new)', () => {
     expect(category).toHaveValue('other')
   })
 
-  test.todo('submitting POSTs { title, status, category, location, description } (no reportedBy) and navigates to /items')
-  test.todo('shows the server\'s message when the request fails (e.g. 409) and stays on the page')
+  test('submitting POSTs { title, status, category, location, description } (no reportedBy) and navigates to /items', async () => {
+    renderAt('/items/new')
+    api.post.mockResolvedValue({ data: { item: {} } }) // success
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText(/title/i), 'Black backpack')
+    await user.selectOptions(screen.getAllByRole('combobox')[0], 'found')
+    await user.selectOptions(screen.getAllByRole('combobox')[1], 'electronics')
+    await user.type(screen.getByPlaceholderText(/location/i), 'Library')
+    await user.type(screen.getByPlaceholderText(/description/i), 'A black backpack')
+    await user.click(screen.getByRole('button', { name: /save/i }))
+    expect(api.post).toHaveBeenCalledWith('/api/items', {
+      title: 'Black backpack',
+      status: 'found',
+      category: 'electronics',
+      location: 'Library',
+      description: 'A black backpack'
+    })
+  })
+
+  test('shows the server\'s message when the request fails (e.g. 409) and stays on the page', async () => {
+    renderAt('/items/new')
+    api.post.mockRejectedValue({ response: { status: 409, data: { message: 'Item already reported at this location' } } })
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText(/title/i), 'Black backpack')
+    await user.selectOptions(screen.getAllByRole('combobox')[0], 'found')
+    await user.selectOptions(screen.getAllByRole('combobox')[1], 'electronics')
+    await user.type(screen.getByPlaceholderText(/location/i), 'Library')
+    await user.type(screen.getByPlaceholderText(/description/i), 'A black backpack')
+    await user.click(screen.getByRole('button', { name: /save/i }))
+    expect(screen.getByText(/item already reported at this location/i)).toBeInTheDocument()
+  })
 })
